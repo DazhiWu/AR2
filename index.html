@@ -1,0 +1,71 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
+    <title>地下三维管网AR查看</title>
+    <link rel="stylesheet" href="./style.css">
+</head>
+<body>
+    <div id="app">
+        <video id="camera-video" autoplay playsinline></video>
+        <canvas id="qr-canvas" class="hidden"></canvas>
+        <canvas id="three-canvas"></canvas>
+        
+        <div id="qr-overlay">
+            <div id="qr-frame"></div>
+            <div id="qr-text">请扫描二维码初始化</div>
+        </div>
+        
+        <div id="debug-panel" class="hidden">
+            <button id="debug-down">视角:向下</button>
+            <button id="debug-forward">视角:向前</button>
+            <button id="debug-toggle-gyro">切换陀螺仪</button>
+            <div id="gyro-data">陀螺仪: α=0 β=0 γ=0</div>
+        </div>
+        
+        <div id="offset-panel" class="hidden">
+            <div class="panel-title">视角偏移控制</div>
+            <div class="offset-grid">
+                <div></div>
+                <button id="offset-forward">↑前</button>
+                <div></div>
+                <button id="offset-left">←左</button>
+                <button id="offset-reset">重置</button>
+                <button id="offset-right">右→</button>
+                <div></div>
+                <button id="offset-back">↓后</button>
+                <div></div>
+            </div>
+            <div class="offset-values">
+                <span>X: <span id="offset-x">0</span></span>
+                <span>Y: <span id="offset-y">0</span></span>
+                <span>Z: <span id="offset-z">0</span></span>
+            </div>
+        </div>
+        
+        <div id="sensor-panel" class="hidden">
+            <div id="sensor-status">
+                <div>GPS: <span id="gps-status">等待...</span></div>
+                <div>陀螺仪: <span id="gyro-status">等待...</span></div>
+                <div>纬度: <span id="lat-value">--</span></div>
+                <div>经度: <span id="lng-value">--</span></div>
+                <div>相对X: <span id="pos-x">--</span>m</div>
+                <div>相对Z: <span id="pos-z">--</span>m</div>
+            </div>
+        </div>
+        
+        <div id="pipe-info" class="hidden">
+            <div id="pipe-info-close">×</div>
+            <h3>管线信息</h3>
+            <div id="pipe-info-content"></div>
+        </div>
+        
+        <div id="start-screen">
+            <button id="start-btn">开始AR体验</button>
+        </div>
+    </div>
+    
+    <script type="module" src="./main.js"></script>
+</body>
+</html>

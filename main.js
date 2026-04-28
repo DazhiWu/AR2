@@ -46,6 +46,7 @@ async function initializeAR() {
     document.getElementById('sensor-panel').classList.remove('hidden');
     document.getElementById('debug-panel').classList.remove('hidden');
     document.getElementById('offset-panel').classList.remove('hidden');
+    document.getElementById('realtime-data-panel').classList.remove('hidden');
 
     try {
         originGPS = await sensorManager.startGPS();
@@ -83,17 +84,22 @@ async function initializeAR() {
 function setupDebugControls() {
     // 视角向下看地面
     document.getElementById('debug-down').addEventListener('click', () => {
-        arScene.camera.rotation.set(-Math.PI / 2, 0, 0); // 向下看
+        arScene.userRotationX = -Math.PI / 2;
+        arScene.userRotationY = 0;
+        arScene._updateCameraFromControls();
     });
     
     // 视角向前看
     document.getElementById('debug-forward').addEventListener('click', () => {
-        arScene.camera.rotation.set(0, 0, 0); // 向前看
+        arScene.userRotationX = 0;
+        arScene.userRotationY = 0;
+        arScene._updateCameraFromControls();
     });
     
     // 切换陀螺仪
     document.getElementById('debug-toggle-gyro').addEventListener('click', () => {
         gyroEnabled = !gyroEnabled;
+        arScene.setGyroEnabled(gyroEnabled);
         document.getElementById('debug-toggle-gyro').textContent = 
             gyroEnabled ? '关闭陀螺仪' : '开启陀螺仪';
     });
@@ -104,15 +110,15 @@ let currentPositionDelta = { x: 0, y: 0, z: 0 };
 const offsetStep = 1; // 每次点击偏移 1 米
 
 function setupOffsetControls() {
-    // 前 (Z轴负方向)
+    // 前 (Z轴正方向 - 北方) - 方向修正
     document.getElementById('offset-forward').addEventListener('click', () => {
-        currentOffset.z -= offsetStep;
+        currentOffset.z += offsetStep;
         updateOffset();
     });
     
-    // 后 (Z轴正方向)
+    // 后 (Z轴负方向 - 南方) - 方向修正
     document.getElementById('offset-back').addEventListener('click', () => {
-        currentOffset.z += offsetStep;
+        currentOffset.z -= offsetStep;
         updateOffset();
     });
     
@@ -138,7 +144,6 @@ function setupOffsetControls() {
 
 function updateOffset() {
     arScene.setCameraOffset(currentOffset.x, currentOffset.y, currentOffset.z);
-    arScene.updateCameraPosition(currentPositionDelta);
     updateOffsetDisplay();
 }
 
@@ -151,6 +156,14 @@ function updateOffsetDisplay() {
 function animate() {
     requestAnimationFrame(animate);
     arScene.render();
+    
+    // 实时更新旋转角度显示
+    if (arScene.isInitialized) {
+        const rotation = arScene.getCameraRotation();
+        document.getElementById('rot-x').textContent = rotation.x.toFixed(2) + '°';
+        document.getElementById('rot-y').textContent = rotation.y.toFixed(2) + '°';
+        document.getElementById('rot-z').textContent = rotation.z.toFixed(2) + '°';
+    }
 }
 
 function setupUIEvents() {
@@ -206,6 +219,11 @@ window.addEventListener('DOMContentLoaded', () => {
         document.getElementById('lng-value').textContent = sensorManager.currentGPS.lng.toFixed(6);
         document.getElementById('pos-x').textContent = delta.x.toFixed(2);
         document.getElementById('pos-z').textContent = delta.z.toFixed(2);
+    };
+    
+    // GPS精度更新回调
+    sensorManager.onAccuracyUpdate = (accuracy) => {
+        document.getElementById('gps-accuracy').textContent = accuracy.toFixed(2) + ' 米';
     };
     
     sensorManager.onOrientationUpdate = (orientation) => {

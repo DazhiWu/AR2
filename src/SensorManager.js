@@ -3,8 +3,10 @@ export class SensorManager {
         this.originGPS = null;
         this.currentGPS = null;
         this.currentOrientation = { alpha: 0, beta: 0, gamma: 0 };
+        this.currentAccuracy = null; // GPS精度信息
         this.onPositionUpdate = null;
         this.onOrientationUpdate = null;
+        this.onAccuracyUpdate = null; // GPS精度更新回调
         this.watchId = null;
     }
 
@@ -29,6 +31,13 @@ export class SensorManager {
                 return;
             }
 
+            // 高精度GPS配置
+            const gpsOptions = {
+                enableHighAccuracy: true,      // 请求高精度位置
+                timeout: 10000,                // 10秒超时
+                maximumAge: 0                  // 不使用缓存位置
+            };
+
             navigator.geolocation.getCurrentPosition(
                 (position) => {
                     this.originGPS = {
@@ -41,13 +50,13 @@ export class SensorManager {
                     this.watchId = navigator.geolocation.watchPosition(
                         (pos) => this.handleGPSUpdate(pos),
                         (err) => console.warn('GPS错误:', err),
-                        { enableHighAccuracy: true, timeout: 5000, maximumAge: 0 }
+                        gpsOptions
                     );
                     
                     resolve(this.originGPS);
                 },
                 (err) => reject(err),
-                { enableHighAccuracy: true }
+                gpsOptions
             );
         });
     }
@@ -58,6 +67,14 @@ export class SensorManager {
             lng: position.coords.longitude,
             alt: position.coords.altitude || 0
         };
+        
+        // 获取GPS精度信息
+        if (position.coords.accuracy !== undefined) {
+            this.currentAccuracy = position.coords.accuracy;
+            if (this.onAccuracyUpdate) {
+                this.onAccuracyUpdate(this.currentAccuracy);
+            }
+        }
 
         if (this.onPositionUpdate && this.originGPS) {
             const delta = this.gpsToLocal(this.currentGPS);
@@ -66,14 +83,15 @@ export class SensorManager {
     }
 
     gpsToLocal(gps) {
-        const R = 6371000;
         const lat1 = this.originGPS.lat * Math.PI / 180;
-        const lat2 = gps.lat * Math.PI / 180;
-        const deltaLat = (gps.lat - this.originGPS.lat) * Math.PI / 180;
-        const deltaLng = (gps.lng - this.originGPS.lng) * Math.PI / 180;
+        const deltaLat = (gps.lat - this.originGPS.lat);
+        const deltaLng = (gps.lng - this.originGPS.lng);
 
+        // 方向修正：
+        // 纬度增加（向北）→ +Z（前方）
+        // 经度增加（向东）→ +X（右方）
         const dx = deltaLng * 111320 * Math.cos(lat1);
-        const dz = -deltaLat * 111320;
+        const dz = deltaLat * 111320;  // 移除负号，北方映射为+Z
         const dy = gps.alt - this.originGPS.alt;
 
         return { x: dx, y: dy, z: dz };

@@ -12,6 +12,23 @@
         <canvas id="qr-canvas" class="hidden"></canvas>
         <canvas id="three-canvas"></canvas>
         
+        <!-- 左上角实时参数显示面板 -->
+        <div id="realtime-data-panel">
+            <div class="panel-title">实时参数</div>
+            
+            <div class="data-section">
+                <div class="section-title">旋转角度</div>
+                <div class="data-item">X轴: <span id="rot-x">0.00°</span></div>
+                <div class="data-item">Y轴: <span id="rot-y">0.00°</span></div>
+                <div class="data-item">Z轴: <span id="rot-z">0.00°</span></div>
+            </div>
+            
+            <div class="data-section">
+                <div class="section-title">GPS精度</div>
+                <div class="data-item">定位误差: <span id="gps-accuracy">--</span></div>
+            </div>
+        </div>
+        
         <div id="qr-overlay">
             <div id="qr-frame"></div>
             <div id="qr-text">请扫描二维码初始化</div>

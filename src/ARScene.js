@@ -49,27 +49,10 @@ export class ARScene {
         
         // ===== 调试参考坐标系 =====
         if (this.debugMode) {
-            // 坐标轴辅助线 (X:红, Y:绿, Z:蓝)
-            const axesHelper = new THREE.AxesHelper(20);
-            this.scene.add(axesHelper);
+            // 添加方向文字标记
+            this._addDirectionLabels();
             
-            // 红色球体表示北方 (0,0,+20) - 方向修正
-            const northMarker = new THREE.Mesh(
-                new THREE.SphereGeometry(1),
-                new THREE.MeshBasicMaterial({ color: 0xff0000 })
-            );
-            northMarker.position.set(0, 0, 20);
-            this.scene.add(northMarker);
-            
-            // 蓝色球体表示东方 (20,0,0)
-            const eastMarker = new THREE.Mesh(
-                new THREE.SphereGeometry(0.8),
-                new THREE.MeshBasicMaterial({ color: 0x0000ff })
-            );
-            eastMarker.position.set(20, 0, 0);
-            this.scene.add(eastMarker);
-            
-            // 添加距离刻度标记（每10米一个）
+            // 添加距离刻度标记（每 10 米一个）
             this._addDistanceMarkers();
         }
         
@@ -223,11 +206,11 @@ export class ARScene {
                 return;
             }
 
-            // 转换经纬度坐标到本地坐标系（与SensorManager保持一致）
+            // 转换经纬度坐标到本地坐标系（与 SensorManager 保持一致）
             const points = geoJSONGeometry.coordinates.map(([lng, lat]) => {
                 const dLng = (lng - originLng) * 111320 * Math.cos(originLat * Math.PI / 180);
                 const dLat = (lat - originLat) * 111320; // 方向修正：移除负号
-                return new THREE.Vector3(dLng, -1.2, dLat); // y=-1.2 表示埋深
+                return new THREE.Vector3(dLng, 0.2, dLat); // y=0.2 表示埋深
             });
 
             // 创建曲线
@@ -259,13 +242,21 @@ export class ARScene {
             // 创建网格
             const mesh = new THREE.Mesh(tubeGeometry, material);
             
+            // 保存原始管点坐标
+            const startCoord = geoJSONGeometry.coordinates[0];
+            const endCoord = geoJSONGeometry.coordinates[geoJSONGeometry.coordinates.length - 1];
+            
             // 保存属性信息
             mesh.userData.pipeInfo = {
                 gxbh: properties.gxbh || properties.qdbh || `P${index + 1}`,
                 gdlx: properties.gdlx || '未知',
                 cz: properties.cz || '未知',
                 gj: properties.gj ? `${properties.gj}mm` : '未知',
-                gxcd: properties.gxcd ? `${properties.gxcd}m` : '未知'
+                gxcd: properties.gxcd ? `${properties.gxcd}m` : '未知',
+                startLng: startCoord[0],
+                startLat: startCoord[1],
+                endLng: endCoord[0],
+                endLat: endCoord[1]
             };
 
             // 添加到场景和管线列表
@@ -323,6 +314,59 @@ export class ARScene {
         const marker = new THREE.Mesh(geometry, material);
         marker.position.set(x, 0.05, z);
         this.scene.add(marker);
+    }
+
+    _createTextSprite(text, color = '#ffffff', size = 64) {
+        // 创建 Canvas 绘制文字
+        const canvas = document.createElement('canvas');
+        canvas.width = 256;
+        canvas.height = 256;
+        const context = canvas.getContext('2d');
+        
+        // 绘制背景（透明）
+        context.clearRect(0, 0, 256, 256);
+        
+        // 绘制文字
+        context.font = 'bold 100px Arial';
+        context.fillStyle = color;
+        context.textAlign = 'center';
+        context.textBaseline = 'middle';
+        context.fillText(text, 128, 128);
+        
+        // 创建纹理
+        const texture = new THREE.CanvasTexture(canvas);
+        const material = new THREE.SpriteMaterial({ 
+            map: texture,
+            transparent: true
+        });
+        const sprite = new THREE.Sprite(material);
+        
+        // 设置 Sprite 大小
+        sprite.scale.set(3, 3, 1);
+        
+        return sprite;
+    }
+
+    _addDirectionLabels() {
+        // 北方 (N) - +Z 方向，红色（与 Z 轴蓝色区分）
+        const northLabel = this._createTextSprite('N', '#ff0000');
+        northLabel.position.set(0, 1.5, 20);
+        this.scene.add(northLabel);
+        
+        // 南方 (S) - -Z 方向，绿色
+        const southLabel = this._createTextSprite('S', '#00ff00');
+        southLabel.position.set(0, 1.5, -20);
+        this.scene.add(southLabel);
+        
+        // 东方 (E) - +X 方向，红色（与 X 轴颜色一致）
+        const eastLabel = this._createTextSprite('E', '#ff0000');
+        eastLabel.position.set(20, 1.5, 0);
+        this.scene.add(eastLabel);
+        
+        // 西方 (W) - -X 方向，红色（与 X 轴颜色一致）
+        const westLabel = this._createTextSprite('W', '#ff0000');
+        westLabel.position.set(-20, 1.5, 0);
+        this.scene.add(westLabel);
     }
 
     _setupTouchControls() {
@@ -400,12 +444,12 @@ export class ARScene {
         this._updateCameraFromControls();
     }
 
-    // 获取相机当前旋转角度（弧度转度数）
+    // 获取触摸旋转角度（弧度转度数，不叠加陀螺仪）
     getCameraRotation() {
         return {
-            x: this.camera.rotation.x * (180 / Math.PI),
-            y: this.camera.rotation.y * (180 / Math.PI),
-            z: this.camera.rotation.z * (180 / Math.PI)
+            x: this.userRotationX * (180 / Math.PI),
+            y: this.userRotationY * (180 / Math.PI),
+            z: 0
         };
     }
 }

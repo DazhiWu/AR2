@@ -164,6 +164,15 @@ body, html {
     z-index: 200;
 }
 
+.start-tip {
+    color: white;
+    font-size: 14px;
+    margin-bottom: 20px;
+    text-align: center;
+    text-shadow: 0 2px 4px rgba(0,0,0,0.3);
+    opacity: 0.9;
+}
+
 #start-btn {
     padding: 18px 45px;
     font-size: 20px;

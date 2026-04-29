@@ -43,6 +43,8 @@ function initQRScanner(video) {
 
 async function initializeAR() {
     arScene.initializeWorld();
+    // 隐藏二维码扫描界面
+    document.getElementById('qr-overlay').classList.add('hidden');
     document.getElementById('sensor-panel').classList.remove('hidden');
     document.getElementById('debug-panel').classList.remove('hidden');
     document.getElementById('offset-panel').classList.remove('hidden');
@@ -185,6 +187,11 @@ function showPipeInfo(info) {
         <p><strong>材质:</strong> ${info.cz}</p>
         <p><strong>口径:</strong> ${info.gj}</p>
         <p><strong>长度:</strong> ${info.gxcd}</p>
+        <hr style="margin: 10px 0; border: 1px solid #ddd;">
+        <p><strong>起点经度:</strong> ${info.startLng.toFixed(6)}°</p>
+        <p><strong>起点纬度:</strong> ${info.startLat.toFixed(6)}°</p>
+        <p><strong>终点经度:</strong> ${info.endLng.toFixed(6)}°</p>
+        <p><strong>终点纬度:</strong> ${info.endLat.toFixed(6)}°</p>
     `;
 
     panel.classList.remove('hidden');
@@ -204,7 +211,9 @@ async function startApp() {
     }
     
     const video = await initCamera();
-    initQRScanner(video);
+    // 注释掉二维码扫描功能，直接初始化 AR
+    // initQRScanner(video);
+    initializeAR();
 }
 
 window.addEventListener('DOMContentLoaded', () => {

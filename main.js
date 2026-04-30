@@ -6,7 +6,7 @@ let qrScanner = null;
 let sensorManager = null;
 let arScene = null;
 let originGPS = { lat: 39.9042, lng: 116.4074 };
-let gyroEnabled = false; // 先禁用陀螺仪测试场景
+let gyroEnabled = true; // 默认开启陀螺仪
 
 async function initCamera() {
     const video = document.getElementById('camera-video');
@@ -48,13 +48,12 @@ async function initializeAR() {
     document.getElementById('sensor-panel').classList.remove('hidden');
     document.getElementById('debug-panel').classList.remove('hidden');
     document.getElementById('offset-panel').classList.remove('hidden');
-    document.getElementById('realtime-data-panel').classList.remove('hidden');
 
     try {
         originGPS = await sensorManager.startGPS();
         document.getElementById('gps-status').textContent = '已连接';
     } catch (e) {
-        console.warn('使用默认GPS位置');
+        console.warn('使用默认 GPS 位置');
         document.getElementById('gps-status').textContent = '模拟';
     }
 
@@ -84,18 +83,9 @@ async function initializeAR() {
 }
 
 function setupDebugControls() {
-    // 视角向下看地面
-    document.getElementById('debug-down').addEventListener('click', () => {
-        arScene.userRotationX = -Math.PI / 2;
-        arScene.userRotationY = 0;
-        arScene._updateCameraFromControls();
-    });
-    
-    // 视角向前看
-    document.getElementById('debug-forward').addEventListener('click', () => {
-        arScene.userRotationX = 0;
-        arScene.userRotationY = 0;
-        arScene._updateCameraFromControls();
+    // 重置用户旋转角度
+    document.getElementById('debug-reset-rotation').addEventListener('click', () => {
+        arScene.resetUserRotation();
     });
     
     // 切换陀螺仪
@@ -105,10 +95,12 @@ function setupDebugControls() {
         document.getElementById('debug-toggle-gyro').textContent = 
             gyroEnabled ? '关闭陀螺仪' : '开启陀螺仪';
     });
+    
+    // 初始化时自动开启陀螺仪
+    arScene.setGyroEnabled(true);
 }
 
 let currentOffset = { x: 0, y: 0, z: 0 };
-let currentPositionDelta = { x: 0, y: 0, z: 0 };
 const offsetStep = 1; // 每次点击偏移 1 米
 
 function setupOffsetControls() {
@@ -159,12 +151,18 @@ function animate() {
     requestAnimationFrame(animate);
     arScene.render();
     
-    // 实时更新旋转角度显示
+    // 实时更新旋转角度显示（相机欧拉角）
     if (arScene.isInitialized) {
         const rotation = arScene.getCameraRotation();
         document.getElementById('rot-x').textContent = rotation.x.toFixed(2) + '°';
         document.getElementById('rot-y').textContent = rotation.y.toFixed(2) + '°';
         document.getElementById('rot-z').textContent = rotation.z.toFixed(2) + '°';
+    }
+    
+    // 更新陀螺仪数据显示
+    const gyroData = document.getElementById('gyro-data');
+    if (gyroData) {
+        // 陀螺仪数据在 onOrientationUpdate 中更新
     }
 }
 
@@ -222,12 +220,11 @@ window.addEventListener('DOMContentLoaded', () => {
     setupUIEvents();
     
     sensorManager.onPositionUpdate = (delta) => {
-        currentPositionDelta = delta;
+        // GPS 位置更新：基于经纬度变化计算相机位置偏移
+        // 相机位置变化会带动视角移动，但场景物体保持固定
         arScene.updateCameraPosition(delta);
         document.getElementById('lat-value').textContent = sensorManager.currentGPS.lat.toFixed(6);
         document.getElementById('lng-value').textContent = sensorManager.currentGPS.lng.toFixed(6);
-        document.getElementById('pos-x').textContent = delta.x.toFixed(2);
-        document.getElementById('pos-z').textContent = delta.z.toFixed(2);
     };
     
     // GPS精度更新回调
@@ -240,7 +237,8 @@ window.addEventListener('DOMContentLoaded', () => {
         document.getElementById('gyro-data').textContent = 
             `陀螺仪：α=${orientation.alpha.toFixed(1)} β=${orientation.beta.toFixed(1)} γ=${orientation.gamma.toFixed(1)}`;
         
-        // 仅在启用时应用
+        // 陀螺仪数据用于控制相机旋转（视角方向）
+        // 场景中的网格和管线保持静态，不受手机旋转影响
         if (gyroEnabled) {
             arScene.updateCameraOrientation(orientation);
         }

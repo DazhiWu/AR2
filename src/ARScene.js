@@ -4,7 +4,7 @@ export class ARScene {
     constructor(canvasElement) {
         this.canvas = canvasElement;
         this.scene = new THREE.Scene();
-        // 优化相机FOV（视场角）到60度，提供更自然的距离感知
+        // 优化相机 FOV（视场角）到 60 度，提供更自然的距离感知
         this.camera = new THREE.PerspectiveCamera(60, window.innerWidth / window.innerHeight, 0.1, 500);
         this.renderer = new THREE.WebGLRenderer({ canvas: canvasElement, alpha: true, antialias: true });
         this.pipes = [];
@@ -24,11 +24,18 @@ export class ARScene {
         // 触摸控制相关变量
         this.isDragging = false;
         this.previousTouch = { x: 0, y: 0 };
-        this.userRotationY = 0; // 用户手动控制的Y轴旋转
-        this.userRotationX = 0; // 用户手动控制的X轴旋转
-        this.useGyro = true; // 是否使用陀螺仪
-        this.gyroYaw = 0; // 陀螺仪的Y轴旋转
-        this.gyroPitch = 0; // 陀螺仪的X轴旋转
+        this.userRotationY = 0; // 用户手动控制的 Y 轴旋转（水平方向）
+        this.userRotationX = 0; // 用户手动控制的 X 轴旋转（垂直方向）
+        this.useGyro = true; // 默认启用陀螺仪
+        this.gyroQuaternion = null;
+        this._screenOrientQuat = new THREE.Quaternion();
+        this._worldQuat = new THREE.Quaternion(-Math.sqrt(0.5), 0, 0, Math.sqrt(0.5));
+        this._adjustQuat = null; // 不需要额外的调整四元数
+        this._tempEuler = new THREE.Euler();
+        this._tempQuat = new THREE.Quaternion();
+        
+        // 视角移动灵敏度
+        this.rotationSensitivity = 0.005;
         
         this.init();
     }
@@ -101,16 +108,18 @@ export class ARScene {
     }
 
     updateCameraPosition(delta) {
+        // 基于经纬度计算的位置增量更新相机位置
+        // delta 参数来自 SensorManager，通过经纬度差值计算得到（单位：米）
         this.positionDelta.set(delta.x, delta.y, delta.z);
     }
 
     _applyCameraPosition() {
-        // 计算目标位置
+        // 计算目标位置：原始位置 + GPS 移动增量 + 用户手动偏移
         const targetX = this.originPosition.x + this.positionDelta.x + this.cameraOffset.x;
         const targetY = this.originPosition.y + this.positionDelta.y + this.cameraOffset.y;
         const targetZ = this.originPosition.z + this.positionDelta.z + this.cameraOffset.z;
         
-        // 平滑移动（线性插值）
+        // 平滑移动（线性插值）- 使相机移动更流畅自然
         this.smoothedPosition.x += (targetX - this.smoothedPosition.x) * this.smoothingFactor;
         this.smoothedPosition.y += (targetY - this.smoothedPosition.y) * this.smoothingFactor;
         this.smoothedPosition.z += (targetZ - this.smoothedPosition.z) * this.smoothingFactor;
@@ -118,7 +127,7 @@ export class ARScene {
         // 应用平滑后的位置到相机
         this.camera.position.copy(this.smoothedPosition);
         
-        // 更新用户位置标记
+        // 更新用户位置标记（绿色小球）
         if (this.userMarker) {
             this.userMarker.position.x = this.smoothedPosition.x;
             this.userMarker.position.z = this.smoothedPosition.z;
@@ -141,14 +150,29 @@ export class ARScene {
             return;
         }
 
-        const alpha = orientation.alpha * Math.PI / 180;
-        const beta = orientation.beta * Math.PI / 180;
+        const alpha = THREE.MathUtils.degToRad(orientation.alpha);
+        const beta = THREE.MathUtils.degToRad(orientation.beta);
+        const gamma = THREE.MathUtils.degToRad(orientation.gamma);
 
-        // 保存陀螺仪数据
-        this.gyroYaw = alpha;  // 方位角
-        this.gyroPitch = -Math.PI / 2 + beta;  // 从俯视逐渐转到正视
+        this._tempEuler.set(beta, alpha, -gamma, 'YXZ');
+        this._tempQuat.setFromEuler(this._tempEuler);
 
-        // 更新相机姿态
+        this._tempQuat.multiply(this._worldQuat);
+
+        const screenOrient = window.screen.orientation
+            ? window.screen.orientation.angle
+            : (window.orientation || 0);
+        this._screenOrientQuat.setFromAxisAngle(
+            new THREE.Vector3(0, 0, 1),
+            -THREE.MathUtils.degToRad(screenOrient)
+        );
+        this._tempQuat.multiply(this._screenOrientQuat);
+
+        // 不再应用额外的 180 度调整，alpha 角已经正确反映了相对于正北的方向
+        // this._tempQuat.premultiply(this._adjustQuat);
+
+        this.gyroQuaternion = this._tempQuat.clone();
+
         this._updateCameraFromControls();
     }
 
@@ -208,8 +232,8 @@ export class ARScene {
 
             // 转换经纬度坐标到本地坐标系（与 SensorManager 保持一致）
             const points = geoJSONGeometry.coordinates.map(([lng, lat]) => {
-                const dLng = (lng - originLng) * 111320 * Math.cos(originLat * Math.PI / 180);
-                const dLat = (lat - originLat) * 111320; // 方向修正：移除负号
+                const dLng = -(lng - originLng) * 111320 * Math.cos(originLat * Math.PI / 180);
+                const dLat = (lat - originLat) * 111320; // 方向修正：北方是+Z
                 return new THREE.Vector3(dLng, 0.2, dLat); // y=0.2 表示埋深
             });
 
@@ -288,9 +312,9 @@ export class ARScene {
             this._createDistanceMarker(0, dist, colors[i], `${dist}米北`);
         });
         
-        // 向东方向（+X）
+        // 向东方向（-X）- 坐标已反转
         distances.forEach((dist, i) => {
-            this._createDistanceMarker(dist, 0, colors[i], `${dist}米东`);
+            this._createDistanceMarker(-dist, 0, colors[i], `${dist}米东`);
         });
         
         // 向南方向（-Z）
@@ -298,9 +322,9 @@ export class ARScene {
             this._createDistanceMarker(0, -dist, colors[i], `${dist}米南`);
         });
         
-        // 向西方向（-X）
+        // 向西方向（+X）- 坐标已反转
         distances.forEach((dist, i) => {
-            this._createDistanceMarker(-dist, 0, colors[i], `${dist}米西`);
+            this._createDistanceMarker(dist, 0, colors[i], `${dist}米西`);
         });
     }
 
@@ -358,14 +382,14 @@ export class ARScene {
         southLabel.position.set(0, 1.5, -20);
         this.scene.add(southLabel);
         
-        // 东方 (E) - +X 方向，红色（与 X 轴颜色一致）
+        // 东方 (E) - -X 方向（因为坐标已反转）
         const eastLabel = this._createTextSprite('E', '#ff0000');
-        eastLabel.position.set(20, 1.5, 0);
+        eastLabel.position.set(-20, 1.5, 0);
         this.scene.add(eastLabel);
         
-        // 西方 (W) - -X 方向，红色（与 X 轴颜色一致）
+        // 西方 (W) - +X 方向（因为坐标已反转）
         const westLabel = this._createTextSprite('W', '#ff0000');
-        westLabel.position.set(-20, 1.5, 0);
+        westLabel.position.set(20, 1.5, 0);
         this.scene.add(westLabel);
     }
 
@@ -379,17 +403,17 @@ export class ARScene {
             }
         }, { passive: false });
 
-        // 触摸移动
+        // 触摸移动 - 控制视角旋转
         this.canvas.addEventListener('touchmove', (e) => {
             if (this.isDragging && e.touches.length === 1) {
                 const deltaX = e.touches[0].clientX - this.previousTouch.x;
                 const deltaY = e.touches[0].clientY - this.previousTouch.y;
 
-                // 更新用户旋转角度
-                this.userRotationY -= deltaX * 0.01; // Y轴旋转（左右）
-                this.userRotationX -= deltaY * 0.01; // X轴旋转（上下）
+                // 更新用户旋转角度（使用优化的灵敏度）
+                this.userRotationY -= deltaX * this.rotationSensitivity; // Y 轴旋转（左右）
+                this.userRotationX -= deltaY * this.rotationSensitivity; // X 轴旋转（上下）
 
-                // 限制X轴旋转范围
+                // 限制 X 轴旋转范围（-90 度到 90 度）
                 this.userRotationX = Math.max(-Math.PI / 2, Math.min(Math.PI / 2, this.userRotationX));
 
                 this.previousTouch.x = e.touches[0].clientX;
@@ -413,43 +437,49 @@ export class ARScene {
     }
 
     _updateCameraFromControls() {
-        // 计算最终旋转角度：用户控制 + 陀螺仪数据
-        let finalYaw, finalPitch;
+        // 相机旋转控制：结合陀螺仪和用户手动触摸控制
+        // 场景中的网格和管线保持静态，只有相机视角发生变化
+        if (this.useGyro && this.gyroQuaternion) {
+            // 陀螺仪模式：以陀螺仪数据为基础，叠加用户手动旋转
+            const q = this.gyroQuaternion.clone();
 
-        if (this.useGyro) {
-            // 使用用户控制覆盖陀螺仪
-            finalYaw = this.gyroYaw + this.userRotationY;
-            finalPitch = this.gyroPitch + this.userRotationX;
+            const userEuler = new THREE.Euler(this.userRotationX, this.userRotationY, 0, 'YXZ');
+            const userQuat = new THREE.Quaternion().setFromEuler(userEuler);
+            q.multiply(userQuat);
+
+            this.camera.quaternion.copy(q);
         } else {
-            // 仅使用用户控制
-            finalYaw = this.userRotationY;
-            finalPitch = this.userRotationX;
+            // 纯手动模式：仅使用用户触摸控制的旋转角度
+            const euler = new THREE.Euler(this.userRotationX, this.userRotationY, 0, 'YXZ');
+            this.camera.setRotationFromEuler(euler);
         }
-
-        // 限制俯仰角范围
-        finalPitch = Math.max(-Math.PI / 2, Math.min(Math.PI / 2, finalPitch));
-
-        // 应用旋转
-        const euler = new THREE.Euler(finalPitch, finalYaw, 0, 'YXZ');
-        this.camera.setRotationFromEuler(euler);
     }
 
     setGyroEnabled(enabled) {
         this.useGyro = enabled;
         if (!enabled) {
-            // 如果禁用陀螺仪，重置陀螺仪数据
-            this.gyroYaw = 0;
-            this.gyroPitch = 0;
+            this.gyroQuaternion = null;
         }
         this._updateCameraFromControls();
     }
 
-    // 获取触摸旋转角度（弧度转度数，不叠加陀螺仪）
+    resetUserRotation() {
+        // 重置用户手动旋转角度，保留陀螺仪基础方向
+        this.userRotationX = 0;
+        this.userRotationY = 0;
+        this._updateCameraFromControls();
+    }
+
     getCameraRotation() {
+        const euler = new THREE.Euler().setFromQuaternion(this.camera.quaternion, 'YXZ');
         return {
-            x: this.userRotationX * (180 / Math.PI),
-            y: this.userRotationY * (180 / Math.PI),
-            z: 0
+            x: THREE.MathUtils.radToDeg(euler.x),
+            y: THREE.MathUtils.radToDeg(euler.y),
+            z: THREE.MathUtils.radToDeg(euler.z)
         };
+    }
+
+    isGyroEnabled() {
+        return this.useGyro;
     }
 }

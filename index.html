@@ -12,20 +12,26 @@
         <canvas id="qr-canvas" class="hidden"></canvas>
         <canvas id="three-canvas"></canvas>
         
-        <!-- 左上角实时参数显示面板 -->
-        <div id="realtime-data-panel">
-            <div class="panel-title">实时参数</div>
+        <!-- 左上角综合参数显示面板 -->
+        <div id="sensor-panel" class="hidden">
+            <div class="panel-title">传感器状态</div>
+            <div class="sensor-status">
+                <div class="status-item">GPS: <span id="gps-status">等待...</span></div>
+                <div class="status-item">陀螺仪：<span id="gyro-status">等待...</span></div>
+            </div>
+            
+            <div class="data-section">
+                <div class="section-title">GPS 精度</div>
+                <div class="data-item">纬度：<span id="lat-value">--</span></div>
+                <div class="data-item">经度：<span id="lng-value">--</span></div>
+                <div class="data-item">定位误差：<span id="gps-accuracy">--</span></div>
+            </div>
             
             <div class="data-section">
                 <div class="section-title">旋转角度</div>
                 <div class="data-item">X 轴：<span id="rot-x">0.00°</span></div>
                 <div class="data-item">Y 轴：<span id="rot-y">0.00°</span></div>
                 <div class="data-item">Z 轴：<span id="rot-z">0.00°</span></div>
-            </div>
-            
-            <div class="data-section">
-                <div class="section-title">GPS 精度</div>
-                <div class="data-item">定位误差：<span id="gps-accuracy">--</span></div>
             </div>
         </div>
         
@@ -35,8 +41,7 @@
         </div>
         
         <div id="debug-panel" class="hidden">
-            <button id="debug-down">视角：向下</button>
-            <button id="debug-forward">视角：向前</button>
+            <button id="debug-reset-rotation">重置旋转</button>
             <button id="debug-toggle-gyro">切换陀螺仪</button>
             <div id="gyro-data">陀螺仪：α=0 β=0 γ=0</div>
         </div>
@@ -58,17 +63,6 @@
                 <span>X: <span id="offset-x">0</span></span>
                 <span>Y: <span id="offset-y">0</span></span>
                 <span>Z: <span id="offset-z">0</span></span>
-            </div>
-        </div>
-        
-        <div id="sensor-panel" class="hidden">
-            <div id="sensor-status">
-                <div>GPS: <span id="gps-status">等待...</span></div>
-                <div>陀螺仪：<span id="gyro-status">等待...</span></div>
-                <div>纬度：<span id="lat-value">--</span></div>
-                <div>经度：<span id="lng-value">--</span></div>
-                <div>相对 X: <span id="pos-x">--</span>m</div>
-                <div>相对 Z: <span id="pos-z">--</span>m</div>
             </div>
         </div>
         

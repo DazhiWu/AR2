@@ -89,9 +89,9 @@ export class SensorManager {
 
         // 方向修正：
         // 纬度增加（向北）→ +Z（前方）
-        // 经度增加（向东）→ +X（右方）
-        const dx = deltaLng * 111320 * Math.cos(lat1);
-        const dz = deltaLat * 111320;  // 移除负号，北方映射为+Z
+        // 经度增加（向东）→ -X（左方）- 修复左右方向问题
+        const dx = -deltaLng * 111320 * Math.cos(lat1);
+        const dz = deltaLat * 111320;  // 北方映射为+Z
         const dy = gps.alt - this.originGPS.alt;
 
         return { x: dx, y: dy, z: dz };
@@ -99,8 +99,16 @@ export class SensorManager {
 
     startOrientation() {
         window.addEventListener('deviceorientation', (event) => {
+            let alpha = event.alpha || 0;
+
+            if (event.webkitCompassHeading !== undefined) {
+                alpha = event.webkitCompassHeading;
+            } else if (event.absolute && event.alpha !== null) {
+                alpha = event.alpha;
+            }
+
             this.currentOrientation = {
-                alpha: event.alpha || 0,
+                alpha: alpha,
                 beta: event.beta || 0,
                 gamma: event.gamma || 0
             };

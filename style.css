@@ -79,14 +79,68 @@ body, html {
 
 #sensor-panel {
     position: absolute;
-    top: 180px;
+    top: 10px;
     left: 10px;
-    background: rgba(0, 0, 0, 0.7);
+    background: rgba(0, 0, 0, 0.75);
     color: white;
-    padding: 12px;
-    border-radius: 8px;
+    padding: 15px;
+    border-radius: 10px;
     font-size: 12px;
     pointer-events: none;
+    z-index: 50;
+    min-width: 180px;
+}
+
+#sensor-panel .panel-title {
+    text-align: center;
+    font-size: 14px;
+    font-weight: bold;
+    margin-bottom: 12px;
+    padding-bottom: 8px;
+    border-bottom: 1px solid rgba(255, 255, 255, 0.3);
+    color: #00ff88;
+}
+
+#sensor-panel .sensor-status {
+    margin-bottom: 12px;
+    padding-bottom: 8px;
+    border-bottom: 1px solid rgba(255, 255, 255, 0.2);
+}
+
+#sensor-panel .status-item {
+    margin: 4px 0;
+    font-size: 13px;
+}
+
+#sensor-panel .status-item span {
+    color: #00ff88;
+    font-weight: bold;
+}
+
+#sensor-panel .data-section {
+    margin-bottom: 10px;
+}
+
+#sensor-panel .data-section:last-child {
+    margin-bottom: 0;
+}
+
+#sensor-panel .section-title {
+    font-size: 11px;
+    color: #aaa;
+    margin-bottom: 6px;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+}
+
+#sensor-panel .data-item {
+    margin: 4px 0;
+    font-family: monospace;
+}
+
+#sensor-panel .data-item span {
+    color: #00ffff;
+    font-weight: bold;
 }
 
 #debug-panel {
@@ -190,33 +244,33 @@ body, html {
     top: 10px;
     right: 10px;
     background: rgba(0, 0, 0, 0.85);
-    padding: 15px;
-    border-radius: 12px;
+    padding: 10px;
+    border-radius: 10px;
     z-index: 100;
     color: white;
 }
 
 #offset-panel .panel-title {
     text-align: center;
-    font-size: 14px;
-    margin-bottom: 10px;
+    font-size: 12px;
+    margin-bottom: 8px;
     font-weight: bold;
 }
 
 .offset-grid {
     display: grid;
-    grid-template-columns: repeat(3, 60px);
-    grid-template-rows: repeat(3, 45px);
-    gap: 5px;
-    margin-bottom: 10px;
+    grid-template-columns: repeat(3, 45px);
+    grid-template-rows: repeat(3, 35px);
+    gap: 4px;
+    margin-bottom: 8px;
 }
 
 .offset-grid button {
     border: none;
-    border-radius: 8px;
+    border-radius: 6px;
     background: #2196F3;
     color: white;
-    font-size: 14px;
+    font-size: 12px;
     font-weight: bold;
     cursor: pointer;
     transition: background 0.2s;
@@ -238,57 +292,6 @@ body, html {
     display: flex;
     justify-content: space-around;
     font-family: monospace;
-    font-size: 12px;
-    color: #00ff88;
-}
-
-/* 实时参数显示面板样式 */
-#realtime-data-panel {
-    position: absolute;
-    top: 10px;
-    left: 10px;
-    background: rgba(0, 0, 0, 0.75);
-    color: white;
-    padding: 15px;
-    border-radius: 10px;
-    font-size: 12px;
-    pointer-events: none;
-    z-index: 50;
-    min-width: 160px;
-}
-
-#realtime-data-panel .panel-title {
-    text-align: center;
-    font-size: 14px;
-    font-weight: bold;
-    margin-bottom: 12px;
-    padding-bottom: 8px;
-    border-bottom: 1px solid rgba(255, 255, 255, 0.3);
-    color: #00ff88;
-}
-
-#realtime-data-panel .data-section {
-    margin-bottom: 10px;
-}
-
-#realtime-data-panel .data-section:last-child {
-    margin-bottom: 0;
-}
-
-#realtime-data-panel .section-title {
     font-size: 11px;
-    color: #aaa;
-    margin-bottom: 6px;
-    text-transform: uppercase;
-    letter-spacing: 0.5px;
-}
-
-#realtime-data-panel .data-item {
-    margin: 4px 0;
-    font-family: monospace;
-}
-
-#realtime-data-panel .data-item span {
-    color: #00ffff;
-    font-weight: bold;
+    color: #00ff88;
 }

@@ -1,248 +1,334 @@
-import { QRScanner } from './src/QRScanner';
-import { SensorManager } from './src/SensorManager';
-import { ARScene } from './src/ARScene';
-
-let qrScanner = null;
-let sensorManager = null;
-let arScene = null;
 let originGPS = { lat: 39.9042, lng: 116.4074 };
-let gyroEnabled = true; // 默认开启陀螺仪
+let markerDetected = false;
+let geoJSONData = [];
+let aFrameScene = null;
+let markerEl = null;
+let fixedPosition = null;
+let fixedRotation = null;
 
-async function initCamera() {
-    const video = document.getElementById('camera-video');
-    try {
-        const stream = await navigator.mediaDevices.getUserMedia({
-            video: { facingMode: 'environment', width: { ideal: 1280 }, height: { ideal: 720 } }
-        });
-        video.srcObject = stream;
-        return new Promise(resolve => {
-            video.onloadedmetadata = () => resolve(video);
-        });
-    } catch (e) {
-        console.error('摄像头初始化失败:', e);
-        alert('请允许摄像头权限');
-        throw e;
-    }
-}
-
-function initQRScanner(video) {
-    const canvas = document.getElementById('qr-canvas');
-    qrScanner = new QRScanner(video, canvas);
-    
-    qrScanner.onQRDetected = (code) => {
-        if (code.data === 'INIT_PIPE_AR') {
-            console.log('二维码检测成功');
-            qrScanner.stopScanning();
-            document.getElementById('qr-overlay').classList.add('hidden');
-            initializeAR();
-        }
-    };
-    
-    qrScanner.startScanning();
-}
-
-async function initializeAR() {
-    arScene.initializeWorld();
-    // 隐藏二维码扫描界面
-    document.getElementById('qr-overlay').classList.add('hidden');
-    document.getElementById('sensor-panel').classList.remove('hidden');
-    document.getElementById('debug-panel').classList.remove('hidden');
-    document.getElementById('offset-panel').classList.remove('hidden');
-
-    try {
-        originGPS = await sensorManager.startGPS();
-        document.getElementById('gps-status').textContent = '已连接';
-    } catch (e) {
-        console.warn('使用默认 GPS 位置');
-        document.getElementById('gps-status').textContent = '模拟';
-    }
-
-    // 加载并解析 GeoJSONL 数据
+async function loadPipeData() {
     try {
         console.log('正在加载管线数据...');
         const response = await fetch('highway.geojsonl.json');
         const text = await response.text();
         const lines = text.trim().split('\n').filter(line => line.trim());
-        const geoJSONData = lines.map(line => JSON.parse(line));
+        geoJSONData = lines.map(line => JSON.parse(line));
         console.log(`成功加载 ${geoJSONData.length} 条管线数据`);
-        
-        // 生成管线
-        arScene.generatePipesFromGeoJSON(geoJSONData, originGPS.lng, originGPS.lat);
+        return geoJSONData;
     } catch (e) {
         console.error('加载管线数据失败:', e);
         alert('加载管线数据失败，请检查控制台输出');
-    }
-
-    sensorManager.startOrientation();
-    document.getElementById('gyro-status').textContent = '已连接';
-
-    setupDebugControls();
-    setupOffsetControls();
-
-    animate();
-}
-
-function setupDebugControls() {
-    // 重置用户旋转角度
-    document.getElementById('debug-reset-rotation').addEventListener('click', () => {
-        arScene.resetUserRotation();
-    });
-    
-    // 切换陀螺仪
-    document.getElementById('debug-toggle-gyro').addEventListener('click', () => {
-        gyroEnabled = !gyroEnabled;
-        arScene.setGyroEnabled(gyroEnabled);
-        document.getElementById('debug-toggle-gyro').textContent = 
-            gyroEnabled ? '关闭陀螺仪' : '开启陀螺仪';
-    });
-    
-    // 初始化时自动开启陀螺仪
-    arScene.setGyroEnabled(true);
-}
-
-let currentOffset = { x: 0, y: 0, z: 0 };
-const offsetStep = 1; // 每次点击偏移 1 米
-
-function setupOffsetControls() {
-    // 前 (Z轴正方向 - 北方) - 方向修正
-    document.getElementById('offset-forward').addEventListener('click', () => {
-        currentOffset.z += offsetStep;
-        updateOffset();
-    });
-    
-    // 后 (Z轴负方向 - 南方) - 方向修正
-    document.getElementById('offset-back').addEventListener('click', () => {
-        currentOffset.z -= offsetStep;
-        updateOffset();
-    });
-    
-    // 左 (X轴负方向)
-    document.getElementById('offset-left').addEventListener('click', () => {
-        currentOffset.x -= offsetStep;
-        updateOffset();
-    });
-    
-    // 右 (X轴正方向)
-    document.getElementById('offset-right').addEventListener('click', () => {
-        currentOffset.x += offsetStep;
-        updateOffset();
-    });
-    
-    // 重置
-    document.getElementById('offset-reset').addEventListener('click', () => {
-        currentOffset = { x: 0, y: 0, z: 0 };
-        arScene.resetCameraOffset();
-        updateOffsetDisplay();
-    });
-}
-
-function updateOffset() {
-    arScene.setCameraOffset(currentOffset.x, currentOffset.y, currentOffset.z);
-    updateOffsetDisplay();
-}
-
-function updateOffsetDisplay() {
-    document.getElementById('offset-x').textContent = currentOffset.x.toFixed(1);
-    document.getElementById('offset-y').textContent = currentOffset.y.toFixed(1);
-    document.getElementById('offset-z').textContent = currentOffset.z.toFixed(1);
-}
-
-function animate() {
-    requestAnimationFrame(animate);
-    arScene.render();
-    
-    // 实时更新旋转角度显示（相机欧拉角）
-    if (arScene.isInitialized) {
-        const rotation = arScene.getCameraRotation();
-        document.getElementById('rot-x').textContent = rotation.x.toFixed(2) + '°';
-        document.getElementById('rot-y').textContent = rotation.y.toFixed(2) + '°';
-        document.getElementById('rot-z').textContent = rotation.z.toFixed(2) + '°';
-    }
-    
-    // 更新陀螺仪数据显示
-    const gyroData = document.getElementById('gyro-data');
-    if (gyroData) {
-        // 陀螺仪数据在 onOrientationUpdate 中更新
+        return [];
     }
 }
 
-function setupUIEvents() {
-    document.getElementById('three-canvas').addEventListener('touchstart', (e) => {
-        e.preventDefault();
-        arScene.handleTouch(e, (pipeInfo) => showPipeInfo(pipeInfo));
-    });
+function createFixedARContent() {
+    const sceneEl = aFrameScene;
     
-    document.getElementById('pipe-info-close').addEventListener('click', hidePipeInfo);
-}
-
-function showPipeInfo(info) {
-    const panel = document.getElementById('pipe-info');
-    const content = document.getElementById('pipe-info-content');
-
-    content.innerHTML = `
-        <p><strong>管段编号:</strong> ${info.gxbh}</p>
-        <p><strong>类型:</strong> ${info.gdlx}</p>
-        <p><strong>材质:</strong> ${info.cz}</p>
-        <p><strong>口径:</strong> ${info.gj}</p>
-        <p><strong>长度:</strong> ${info.gxcd}</p>
-        <hr style="margin: 10px 0; border: 1px solid #ddd;">
-        <p><strong>起点经度:</strong> ${info.startLng.toFixed(6)}°</p>
-        <p><strong>起点纬度:</strong> ${info.startLat.toFixed(6)}°</p>
-        <p><strong>终点经度:</strong> ${info.endLng.toFixed(6)}°</p>
-        <p><strong>终点纬度:</strong> ${info.endLat.toFixed(6)}°</p>
-    `;
-
-    panel.classList.remove('hidden');
-}
-
-function hidePipeInfo() {
-    document.getElementById('pipe-info').classList.add('hidden');
-}
-
-async function startApp() {
-    document.getElementById('start-screen').classList.add('hidden');
+    // 创建独立的实体，不依赖于标记
+    const fixedEntity = document.createElement('a-entity');
+    fixedEntity.setAttribute('id', 'fixed-content');
     
-    const hasPermission = await sensorManager.requestPermissions();
-    if (!hasPermission) {
-        alert('需要陀螺仪权限');
-        return;
+    // 应用固定的位置和旋转
+    if (fixedPosition) {
+        fixedEntity.setAttribute('position', `${fixedPosition.x} ${fixedPosition.y} ${fixedPosition.z}`);
+    }
+    if (fixedRotation) {
+        fixedEntity.setAttribute('rotation', `${fixedRotation.x} ${fixedRotation.y} ${fixedRotation.z}`);
     }
     
-    const video = await initCamera();
-    // 注释掉二维码扫描功能，直接初始化 AR
-    // initQRScanner(video);
-    initializeAR();
+    sceneEl.appendChild(fixedEntity);
+    
+    // 创建网格面 (100m x 100m)
+    const gridEl = document.createElement('a-entity');
+    gridEl.setAttribute('geometry', {
+        primitive: 'plane',
+        width: 100,
+        height: 100
+    });
+    gridEl.setAttribute('material', {
+        color: '#003300',
+        opacity: 0.1,
+        transparent: true,
+        side: 'double'
+    });
+    gridEl.setAttribute('rotation', '-90 0 0');
+    gridEl.setAttribute('position', '0 0 0');
+    fixedEntity.appendChild(gridEl);
+    
+    // 创建网格线
+    const gridHelperEl = document.createElement('a-entity');
+    gridHelperEl.setAttribute('line-grid', {
+        size: 100,
+        divisions: 100,
+        colorCenterLine: '#44ff44',
+        colorGrid: '#222222'
+    });
+    gridHelperEl.setAttribute('position', '0 0 0');
+    fixedEntity.appendChild(gridHelperEl);
+    
+    // 添加距离标记和方向标记
+    addDirectionMarkers(fixedEntity);
+    addDistanceMarkers(fixedEntity);
+    
+    // 生成管线
+    if (geoJSONData.length > 0) {
+        generatePipes(geoJSONData, fixedEntity);
+    }
+}
+
+function addDirectionMarkers(parent) {
+    const directions = [
+        { label: 'N', x: 0, z: 20, color: '#ff0000' },
+        { label: 'S', x: 0, z: -20, color: '#00ff00' },
+        { label: 'E', x: -20, z: 0, color: '#ff0000' },
+        { label: 'W', x: 20, z: 0, color: '#ff0000' }
+    ];
+    
+    directions.forEach(dir => {
+        const markerEl = document.createElement('a-text');
+        markerEl.setAttribute('value', dir.label);
+        markerEl.setAttribute('color', dir.color);
+        markerEl.setAttribute('position', `${dir.x} 1.5 ${dir.z}`);
+        markerEl.setAttribute('scale', '5 5 5');
+        markerEl.setAttribute('align', 'center');
+        parent.appendChild(markerEl);
+    });
+}
+
+function addDistanceMarkers(parent) {
+    const distances = [10, 20, 30, 40, 50];
+    const colors = ['#ffff00', '#ff8800', '#ff0088', '#8800ff', '#00ffff'];
+    
+    // 四个方向添加标记
+    const directions = [
+        { x: 0, z: 1 },  // 北
+        { x: -1, z: 0 }, // 东
+        { x: 0, z: -1 }, // 南
+        { x: 1, z: 0 }   // 西
+    ];
+    
+    directions.forEach(dir => {
+        distances.forEach((dist, i) => {
+            const markerEl = document.createElement('a-cylinder');
+            markerEl.setAttribute('radius', '0.3');
+            markerEl.setAttribute('height', '0.1');
+            markerEl.setAttribute('color', colors[i]);
+            markerEl.setAttribute('opacity', '0.7');
+            markerEl.setAttribute('position', `${dir.x * dist} 0.05 ${dir.z * dist}`);
+            parent.appendChild(markerEl);
+        });
+    });
+}
+
+function generatePipes(data, parent) {
+    const colorMap = {
+        '供水管道': '#00aaff',
+        '燃气管道': '#ffaa00',
+        '污水管道': '#666666',
+        '雨水管道': '#4488ff',
+        '电力管道': '#ff0000',
+        '通信管道': '#00ff00',
+        '热力管道': '#ff4444',
+        '工业用水': '#00ffff',
+        '综合管廊': '#888844',
+        '其他': '#888888'
+    };
+    
+    data.forEach((feature, index) => {
+        const properties = feature.properties;
+        const geometry = feature.geometry;
+        
+        if (!geometry || geometry.type !== 'LineString' || !geometry.coordinates || geometry.coordinates.length < 2) {
+            return;
+        }
+        
+        // 转换坐标（以标记为原点）
+        const coords = geometry.coordinates.map(([lng, lat]) => {
+            const dLng = -(lng - originGPS.lng) * 111320 * Math.cos(originGPS.lat * Math.PI / 180);
+            const dLat = (lat - originGPS.lat) * 111320;
+            return { x: dLng, y: 0.2, z: dLat };
+        });
+        
+        // 创建管线
+        if (coords.length >= 2) {
+            let radius = 0.1;
+            if (properties.gj) {
+                const gj = parseFloat(properties.gj);
+                if (!isNaN(gj)) {
+                    radius = gj / 2000;
+                }
+            }
+            
+            const color = colorMap[properties.gdlx] || colorMap['其他'];
+            
+            const tubeEl = document.createElement('a-entity');
+            tubeEl.setAttribute('id', `pipe-${index}`);
+            
+            // 使用多个 cylinder 连接起来
+            for (let i = 0; i < coords.length - 1; i++) {
+                const start = coords[i];
+                const end = coords[i + 1];
+                
+                const dx = end.x - start.x;
+                const dy = end.y - start.y;
+                const dz = end.z - start.z;
+                const distance = Math.sqrt(dx * dx + dy * dy + dz * dz);
+                
+                if (distance > 0) {
+                    const segmentEl = document.createElement('a-cylinder');
+                    segmentEl.setAttribute('radius', radius);
+                    segmentEl.setAttribute('height', distance);
+                    segmentEl.setAttribute('color', color);
+                    segmentEl.setAttribute('opacity', '0.8');
+                    
+                    // 计算位置和旋转
+                    const midX = (start.x + end.x) / 2;
+                    const midY = (start.y + end.y) / 2;
+                    const midZ = (start.z + end.z) / 2;
+                    
+                    segmentEl.setAttribute('position', `${midX} ${midY} ${midZ}`);
+                    
+                    // 计算旋转
+                    const angleY = Math.atan2(dx, dz) * 180 / Math.PI;
+                    const angleX = -Math.asin(dy / distance) * 180 / Math.PI;
+                    segmentEl.setAttribute('rotation', `${angleX} ${angleY} 0`);
+                    
+                    tubeEl.appendChild(segmentEl);
+                }
+            }
+            
+            tubeEl.userData = {
+                pipeInfo: {
+                    gxbh: properties.gxbh || properties.qdbh || `P${index + 1}`,
+                    gdlx: properties.gdlx || '未知',
+                    cz: properties.cz || '未知',
+                    gj: properties.gj ? `${properties.gj}mm` : '未知',
+                    gxcd: properties.gxcd ? `${properties.gxcd}m` : '未知',
+                    startLng: geometry.coordinates[0][0],
+                    startLat: geometry.coordinates[0][1],
+                    endLng: geometry.coordinates[geometry.coordinates.length - 1][0],
+                    endLat: geometry.coordinates[geometry.coordinates.length - 1][1]
+                }
+            };
+            
+            parent.appendChild(tubeEl);
+        }
+    });
+}
+
+async function getCurrentGPS() {
+    return new Promise((resolve, reject) => {
+        if (!navigator.geolocation) {
+            console.warn('Geolocation 不支持，使用默认位置');
+            resolve(originGPS);
+            return;
+        }
+        
+        navigator.geolocation.getCurrentPosition(
+            (position) => {
+                const gps = {
+                    lat: position.coords.latitude,
+                    lng: position.coords.longitude
+                };
+                console.log('获取 GPS 位置成功:', gps);
+                document.getElementById('gps-status').textContent = '已连接';
+                document.getElementById('lat-value').textContent = gps.lat.toFixed(6);
+                document.getElementById('lng-value').textContent = gps.lng.toFixed(6);
+                document.getElementById('gps-accuracy').textContent = position.coords.accuracy.toFixed(2) + ' 米';
+                resolve(gps);
+            },
+            (error) => {
+                console.warn('获取 GPS 失败，使用默认位置:', error);
+                document.getElementById('gps-status').textContent = '模拟';
+                resolve(originGPS);
+            },
+            { enableHighAccuracy: true, timeout: 10000, maximumAge: 0 }
+        );
+    });
+}
+
+function setupMarkerEvents() {
+    markerEl = document.getElementById('hiro-marker');
+    
+    if (markerEl) {
+        markerEl.addEventListener('markerFound', async () => {
+            if (markerDetected) return;
+            
+            console.log('Hiro 标记识别成功！正在固定位置...');
+            
+            // 隐藏开始屏幕，显示传感器面板
+            document.getElementById('start-screen').classList.add('hidden');
+            document.getElementById('sensor-panel').classList.remove('hidden');
+            
+            // 获取当前 GPS 位置作为原点
+            originGPS = await getCurrentGPS();
+            
+            // 等待几帧确保标记位置稳定
+            setTimeout(() => {
+                // 获取标记的位置和旋转
+                if (markerEl.object3D) {
+                    fixedPosition = {
+                        x: markerEl.object3D.position.x,
+                        y: markerEl.object3D.position.y,
+                        z: markerEl.object3D.position.z
+                    };
+                    
+                    const rotation = markerEl.object3D.rotation;
+                    fixedRotation = {
+                        x: THREE.MathUtils.radToDeg(rotation.x),
+                        y: THREE.MathUtils.radToDeg(rotation.y),
+                        z: THREE.MathUtils.radToDeg(rotation.z)
+                    };
+                    
+                    console.log('标记位置已保存:', fixedPosition);
+                    console.log('标记旋转已保存:', fixedRotation);
+                }
+                
+                // 标记已检测
+                markerDetected = true;
+                
+                // 创建独立的固定内容
+                createFixedARContent();
+                
+                // 完全禁用标记
+                markerEl.setAttribute('visible', 'false');
+                
+                console.log('✅ AR 内容已完全固定！现在可以自由移动设备，内容将保持不变。');
+            }, 300);
+        });
+        
+        markerEl.addEventListener('markerLost', () => {
+            if (!markerDetected) {
+                console.log('标记丢失，继续寻找...');
+            } else {
+                console.log('标记已丢失，但内容保持固定');
+            }
+        });
+    }
+}
+
+async function init() {
+    // 先加载管线数据
+    await loadPipeData();
+    
+    aFrameScene = document.getElementById('ar-scene');
+    
+    // 等待 A-Frame 场景加载完成
+    if (aFrameScene.hasLoaded) {
+        setupMarkerEvents();
+    } else {
+        aFrameScene.addEventListener('loaded', setupMarkerEvents);
+    }
+    
+    console.log('等待 Hiro 标记识别...');
 }
 
 window.addEventListener('DOMContentLoaded', () => {
-    sensorManager = new SensorManager();
-    arScene = new ARScene(document.getElementById('three-canvas'));
-    setupUIEvents();
+    // 隐藏不需要的面板
+    document.getElementById('debug-panel').classList.add('hidden');
+    document.getElementById('offset-panel').classList.add('hidden');
     
-    sensorManager.onPositionUpdate = (delta) => {
-        // GPS 位置更新：基于经纬度变化计算相机位置偏移
-        // 相机位置变化会带动视角移动，但场景物体保持固定
-        arScene.updateCameraPosition(delta);
-        document.getElementById('lat-value').textContent = sensorManager.currentGPS.lat.toFixed(6);
-        document.getElementById('lng-value').textContent = sensorManager.currentGPS.lng.toFixed(6);
-    };
-    
-    // GPS精度更新回调
-    sensorManager.onAccuracyUpdate = (accuracy) => {
-        document.getElementById('gps-accuracy').textContent = accuracy.toFixed(2) + ' 米';
-    };
-    
-    sensorManager.onOrientationUpdate = (orientation) => {
-        // 更新调试显示
-        document.getElementById('gyro-data').textContent = 
-            `陀螺仪：α=${orientation.alpha.toFixed(1)} β=${orientation.beta.toFixed(1)} γ=${orientation.gamma.toFixed(1)}`;
-        
-        // 陀螺仪数据用于控制相机旋转（视角方向）
-        // 场景中的网格和管线保持静态，不受手机旋转影响
-        if (gyroEnabled) {
-            arScene.updateCameraOrientation(orientation);
-        }
-    };
-    
-    document.getElementById('start-btn').addEventListener('click', startApp);
+    // 开始初始化
+    init();
 });

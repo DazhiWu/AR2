@@ -1,0 +1,183 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Hiro 标记 - AR 地下管网</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+        
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            min-height: 100vh;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            padding: 2rem;
+        }
+        
+        .container {
+            background: white;
+            border-radius: 16px;
+            padding: 2rem;
+            box-shadow: 0 10px 40px rgba(0,0,0,0.2);
+            max-width: 600px;
+            width: 100%;
+            text-align: center;
+        }
+        
+        h1 {
+            color: #333;
+            margin-bottom: 0.5rem;
+        }
+        
+        .subtitle {
+            color: #666;
+            margin-bottom: 2rem;
+        }
+        
+        .marker-wrapper {
+            background: #f5f5f5;
+            padding: 2rem;
+            border-radius: 8px;
+            margin-bottom: 2rem;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+        }
+        
+        .marker {
+            width: 256px;
+            height: 256px;
+        }
+        
+        .instructions {
+            text-align: left;
+            background: #f0f7ff;
+            padding: 1.5rem;
+            border-radius: 8px;
+            margin-bottom: 2rem;
+        }
+        
+        .instructions h3 {
+            color: #1a73e8;
+            margin-bottom: 1rem;
+        }
+        
+        .instructions ol {
+            margin-left: 1.5rem;
+            color: #333;
+            line-height: 1.8;
+        }
+        
+        .btn {
+            display: inline-block;
+            padding: 1rem 2rem;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            text-decoration: none;
+            border-radius: 8px;
+            font-weight: 600;
+            transition: transform 0.2s, box-shadow 0.2s;
+            border: none;
+            cursor: pointer;
+            font-size: 1rem;
+        }
+        
+        .btn:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 5px 20px rgba(102, 126, 234, 0.4);
+        }
+        
+        .btn-secondary {
+            background: #e0e0e0;
+            color: #333;
+            margin-left: 1rem;
+        }
+        
+        .btn-secondary:hover {
+            background: #d0d0d0;
+            box-shadow: 0 5px 20px rgba(0,0,0,0.1);
+        }
+        
+        @media print {
+            body {
+                background: white;
+                padding: 0;
+            }
+            
+            .container {
+                box-shadow: none;
+                max-width: 100%;
+            }
+            
+            .instructions, .btn {
+                display: none;
+            }
+            
+            .marker-wrapper {
+                background: white;
+                padding: 0;
+            }
+            
+            .marker {
+                width: 400px;
+                height: 400px;
+            }
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>Hiro AR 标记</h1>
+        <p class="subtitle">用于地下管网 AR 系统</p>
+        
+        <div class="marker-wrapper">
+            <svg class="marker" viewBox="0 0 1000 1000" xmlns="http://www.w3.org/2000/svg">
+                <!-- 外边框 -->
+                <rect x="50" y="50" width="900" height="900" fill="#000000"/>
+                
+                <!-- 白色内框 -->
+                <rect x="150" y="150" width="700" height="700" fill="#ffffff"/>
+                
+                <!-- 中心黑色正方形 -->
+                <rect x="350" y="350" width="300" height="300" fill="#000000"/>
+                
+                <!-- 内部白色正方形 -->
+                <rect x="400" y="400" width="200" height="200" fill="#ffffff"/>
+                
+                <!-- 左上角正方形 -->
+                <rect x="200" y="200" width="100" height="100" fill="#000000"/>
+                
+                <!-- 右上角正方形 -->
+                <rect x="700" y="200" width="100" height="100" fill="#000000"/>
+                
+                <!-- 左下角正方形 -->
+                <rect x="200" y="700" width="100" height="100" fill="#000000"/>
+                
+                <!-- 右下角正方形 -->
+                <rect x="700" y="700" width="100" height="100" fill="#000000"/>
+            </svg>
+        </div>
+        
+        <div class="instructions">
+            <h3>使用说明</h3>
+            <ol>
+                <li>点击下方"打印标记"按钮，将此页面打印出来</li>
+                <li>建议打印尺寸至少 15x15 厘米（约 6x6 英寸）</li>
+                <li>将打印好的标记平放在地面上，确保完整可见</li>
+                <li>打开 <a href="index.html" target="_blank">AR 地下管网系统</a>，将摄像头对准标记</li>
+                <li>识别成功后，即可看到固定在标记位置的 AR 内容</li>
+            </ol>
+        </div>
+        
+        <button class="btn" onclick="window.print()">打印标记</button>
+        <a href="index.html" class="btn btn-secondary">返回 AR 系统</a>
+    </div>
+</body>
+</html>

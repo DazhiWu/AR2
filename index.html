@@ -5,12 +5,83 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
     <title>地下三维管网 AR 查看</title>
     <link rel="stylesheet" href="./style.css">
+    <!-- A-Frame 和 AR.js 库 -->
+    <script src="https://aframe.io/releases/1.4.2/aframe.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/@ar-js-org/ar.js@3.4.5/aframe/build/aframe-ar.js"></script>
+    
+    <!-- 自定义 A-Frame 组件 -->
+    <script>
+        AFRAME.registerComponent('line-grid', {
+            schema: {
+                size: { type: 'number', default: 100 },
+                divisions: { type: 'number', default: 100 },
+                colorCenterLine: { type: 'color', default: '#44ff44' },
+                colorGrid: { type: 'color', default: '#222222' }
+            },
+            
+            init: function() {
+                const data = this.data;
+                const size = data.size;
+                const divisions = data.divisions;
+                const step = size / divisions;
+                
+                const group = new THREE.Group();
+                
+                // 创建中心线（XY平面）
+                const centerMaterial = new THREE.LineBasicMaterial({ color: data.colorCenterLine });
+                const gridMaterial = new THREE.LineBasicMaterial({ color: data.colorGrid });
+                
+                // 绘制 X 方向的线
+                for (let i = 0; i <= divisions; i++) {
+                    const z = -size / 2 + i * step;
+                    const geometry = new THREE.BufferGeometry().setFromPoints([
+                        new THREE.Vector3(-size / 2, 0, z),
+                        new THREE.Vector3(size / 2, 0, z)
+                    ]);
+                    const line = new THREE.Line(geometry, i === divisions / 2 ? centerMaterial : gridMaterial);
+                    group.add(line);
+                }
+                
+                // 绘制 Z 方向的线
+                for (let i = 0; i <= divisions; i++) {
+                    const x = -size / 2 + i * step;
+                    const geometry = new THREE.BufferGeometry().setFromPoints([
+                        new THREE.Vector3(x, 0, -size / 2),
+                        new THREE.Vector3(x, 0, size / 2)
+                    ]);
+                    const line = new THREE.Line(geometry, i === divisions / 2 ? centerMaterial : gridMaterial);
+                    group.add(line);
+                }
+                
+                this.el.setObject3D('mesh', group);
+            }
+        });
+    </script>
 </head>
 <body>
     <div id="app">
-        <video id="camera-video" autoplay playsinline></video>
-        <canvas id="qr-canvas" class="hidden"></canvas>
-        <canvas id="three-canvas"></canvas>
+        <!-- A-Frame AR 场景 -->
+        <a-scene 
+            vr-mode-ui="enabled: false"
+            arjs="detectionMode: mono_and_matrix; matrixCodeType: 3x3; sourceType: webcam; trackingMethod: best;"
+            id="ar-scene">
+            
+            <!-- Hiro 标记 - 配置为识别成功后保持固定 -->
+            <a-marker 
+                type="hiro" 
+                id="hiro-marker" 
+                emitevents="true"
+                preset="hiro"
+                smooth="true"
+                smoothCount="5"
+                smoothTolerance="0.01"
+                smoothThreshold="2">
+                <a-entity id="ar-content"></a-entity>
+            </a-marker>
+            
+            <!-- 相机 -->
+            <a-entity camera look-controls="enabled: false"></a-entity>
+        </a-scene>
         
         <!-- 左上角综合参数显示面板 -->
         <div id="sensor-panel" class="hidden">

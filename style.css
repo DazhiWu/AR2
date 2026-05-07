@@ -18,7 +18,7 @@ body, html {
     overflow: hidden;
 }
 
-#camera-video {
+/* #camera-video {
     position: absolute;
     top: 0;
     left: 0;
@@ -42,13 +42,13 @@ body, html {
     width: 100%;
     height: 100%;
     pointer-events: auto;
-}
+} */
 
 .hidden {
     display: none !important;
 }
 
-#qr-overlay {
+/* #qr-overlay {
     position: absolute;
     top: 0;
     left: 0;
@@ -75,7 +75,7 @@ body, html {
     color: white;
     font-size: 18px;
     text-shadow: 0 2px 4px rgba(0,0,0,0.5);
-}
+} */
 
 #sensor-panel {
     position: absolute;
@@ -204,40 +204,7 @@ body, html {
     line-height: 1.8;
 }
 
-#start-screen {
-    position: absolute;
-    top: 0;
-    left: 0;
-    width: 100%;
-    height: 100%;
-    background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
-    display: flex;
-    flex-direction: column;
-    align-items: center;
-    justify-content: center;
-    z-index: 200;
-}
 
-.start-tip {
-    color: white;
-    font-size: 14px;
-    margin-bottom: 20px;
-    text-align: center;
-    text-shadow: 0 2px 4px rgba(0,0,0,0.3);
-    opacity: 0.9;
-}
-
-#start-btn {
-    padding: 18px 45px;
-    font-size: 20px;
-    background: white;
-    color: #667eea;
-    border: none;
-    border-radius: 30px;
-    cursor: pointer;
-    font-weight: bold;
-    box-shadow: 0 4px 15px rgba(0,0,0,0.2);
-}
 
 #offset-panel {
     position: absolute;
@@ -294,4 +261,35 @@ body, html {
     font-family: monospace;
     font-size: 11px;
     color: #00ff88;
+}
+
+/* 模拟识别按钮样式 */
+#simulate-panel {
+    position: absolute;
+    bottom: 20px;
+    left: 50%;
+    transform: translateX(-50%);
+    z-index: 100;
+}
+
+.simulate-btn {
+    padding: 15px 30px;
+    background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+    color: white;
+    border: none;
+    border-radius: 25px;
+    font-size: 16px;
+    font-weight: bold;
+    cursor: pointer;
+    box-shadow: 0 4px 15px rgba(102, 126, 234, 0.4);
+    transition: transform 0.2s, box-shadow 0.2s;
+}
+
+.simulate-btn:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 6px 20px rgba(102, 126, 234, 0.5);
+}
+
+.simulate-btn:active {
+    transform: translateY(0);
 }

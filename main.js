@@ -257,8 +257,7 @@ function setupMarkerEvents() {
             
             console.log('Hiro 标记识别成功！正在固定位置...');
             
-            // 隐藏开始屏幕，显示传感器面板
-            document.getElementById('start-screen').classList.add('hidden');
+            // 显示传感器面板
             document.getElementById('sensor-panel').classList.remove('hidden');
             
             // 获取当前 GPS 位置作为原点
@@ -308,6 +307,49 @@ function setupMarkerEvents() {
     }
 }
 
+// 模拟 Hiro 标记识别成功
+async function simulateMarkerDetection() {
+    if (markerDetected) {
+        console.log('已经识别过了，无需再次模拟');
+        return;
+    }
+    
+    console.log('🎯 模拟 Hiro 标记识别成功！正在固定位置...');
+    
+    // 显示传感器面板
+    document.getElementById('sensor-panel').classList.remove('hidden');
+    
+    // 隐藏模拟按钮
+    document.getElementById('simulate-panel').style.display = 'none';
+    
+    // 获取当前 GPS 位置作为原点
+    originGPS = await getCurrentGPS();
+    
+    // 设置默认的固定位置和旋转（模拟摄像头正中央）
+    fixedPosition = {
+        x: 0,
+        y: 0,
+        z: -2  // 假设标记在摄像头前方 2 米处
+    };
+    
+    fixedRotation = {
+        x: 0,
+        y: 0,
+        z: 0
+    };
+    
+    console.log('标记位置已保存:', fixedPosition);
+    console.log('标记旋转已保存:', fixedRotation);
+    
+    // 标记已检测
+    markerDetected = true;
+    
+    // 创建独立的固定内容
+    createFixedARContent();
+    
+    console.log('✅ AR 内容已完全固定！现在可以自由移动设备，内容将保持不变。');
+}
+
 async function init() {
     // 先加载管线数据
     await loadPipeData();
@@ -319,6 +361,12 @@ async function init() {
         setupMarkerEvents();
     } else {
         aFrameScene.addEventListener('loaded', setupMarkerEvents);
+    }
+    
+    // 设置模拟按钮点击事件
+    const simulateBtn = document.getElementById('simulate-btn');
+    if (simulateBtn) {
+        simulateBtn.addEventListener('click', simulateMarkerDetection);
     }
     
     console.log('等待 Hiro 标记识别...');

@@ -6,8 +6,8 @@
     <title>地下三维管网 AR 查看</title>
     <link rel="stylesheet" href="./style.css">
     <!-- A-Frame 和 AR.js 库 -->
-    <script src="https://aframe.io/releases/1.4.2/aframe.min.js"></script>
-    <script src="https://cdn.jsdelivr.net/npm/@ar-js-org/ar.js@3.4.5/aframe/build/aframe-ar.js"></script>
+    <script src="./lib/aframe.min.js"></script>
+    <script src="./lib/aframe-ar.js"></script>
     
     <!-- 自定义 A-Frame 组件 -->
     <script>
@@ -106,10 +106,10 @@
             </div>
         </div>
         
-        <div id="qr-overlay">
+        <!-- <div id="qr-overlay">
             <div id="qr-frame"></div>
             <div id="qr-text">请扫描二维码初始化</div>
-        </div>
+        </div> -->
         
         <div id="debug-panel" class="hidden">
             <button id="debug-reset-rotation">重置旋转</button>
@@ -137,16 +137,18 @@
             </div>
         </div>
         
+        <!-- 模拟识别按钮 -->
+        <div id="simulate-panel">
+            <button id="simulate-btn" class="simulate-btn">模拟 Hiro 识别成功</button>
+        </div>
+        
         <div id="pipe-info" class="hidden">
             <div id="pipe-info-close">×</div>
             <h3>管线信息</h3>
             <div id="pipe-info-content"></div>
         </div>
         
-        <div id="start-screen">
-            <p class="start-tip">请用户竖直拿稳手机后点击按钮</p>
-            <button id="start-btn">开始 AR 体验</button>
-        </div>
+
     </div>
     
     <script type="module" src="./main.js"></script>

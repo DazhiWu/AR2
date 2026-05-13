@@ -1,0 +1,92 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
+    <title>地下三维管网 AR 查看</title>
+    <link rel="stylesheet" href="./style.css">
+</head>
+<body>
+    <div id="app">
+        <video id="camera-video" autoplay playsinline></video>
+        <canvas id="three-canvas"></canvas>
+        
+        <div id="sensor-panel">
+            <div class="panel-title">传感器状态</div>
+            <div class="sensor-status">
+                <div class="status-item">GPS: <span id="gps-status">等待...</span></div>
+                <div class="status-item">陀螺仪: <span id="gyro-status">等待...</span></div>
+            </div>
+            
+            <div class="data-section">
+                <div class="section-title">GPS 精度</div>
+                <div class="data-item">纬度: <span id="lat-value">--</span></div>
+                <div class="data-item">经度: <span id="lng-value">--</span></div>
+                <div class="data-item">定位误差: <span id="gps-accuracy">--</span></div>
+            </div>
+            
+            <div class="data-section">
+                <div class="section-title">旋转角度</div>
+                <div class="data-item">X轴: <span id="rot-x">0.00</span></div>
+                <div class="data-item">Y轴: <span id="rot-y">0.00</span></div>
+                <div class="data-item">Z轴: <span id="rot-z">0.00</span></div>
+            </div>
+        </div>
+        
+        <div id="debug-panel">
+            <button id="debug-reset-rotation">重置旋转</button>
+            <button id="debug-toggle-gyro">切换陀螺仪</button>
+            <button id="debug-toggle-anchor-panel">锚点标定</button>
+            <div id="gyro-data">陀螺仪: 0</div>
+        </div>
+        
+        <div id="offset-panel">
+            <div class="panel-title">视角偏移控制</div>
+            <div class="offset-grid">
+                <div></div>
+                <button id="offset-forward">北</button>
+                <div></div>
+                <button id="offset-left">西</button>
+                <button id="offset-reset">重置</button>
+                <button id="offset-right">东</button>
+                <div></div>
+                <button id="offset-back">南</button>
+                <div></div>
+            </div>
+            <div class="offset-values">
+                <span>X: <span id="offset-x">0</span></span>
+                <span>Y: <span id="offset-y">0</span></span>
+                <span>Z: <span id="offset-z">0</span></span>
+            </div>
+        </div>
+
+        <div id="anchor-panel" class="hidden">
+            <div class="panel-title">锚点标定 <span id="anchor-count">(0/3)</span></div>
+            
+            <div class="anchor-status" id="anchor-status">
+                请至少添加3个锚点进行标定
+            </div>
+            
+            <div class="anchor-buttons">
+                <button id="btn-add-anchor" class="primary">添加当前位置为锚点</button>
+                <button id="btn-remove-anchor">移除上一个</button>
+                <button id="btn-clear-anchors">清除所有</button>
+            </div>
+            
+            <div class="anchor-buttons" id="calibrate-section" style="display: none;">
+                <button id="btn-calibrate" class="success">开始标定</button>
+            </div>
+            
+            <div class="anchor-list" id="anchor-list"></div>
+        </div>
+        
+        <div id="pipe-info" class="hidden">
+            <div id="pipe-info-close">×</div>
+            <h3>管线信息</h3>
+            <div id="pipe-info-content"></div>
+        </div>
+    </div>
+    
+    <script type="module" src="./main.js"></script>
+</body>
+</html>
